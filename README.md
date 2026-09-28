@@ -21,7 +21,7 @@ MeetMind AI transcribes the recording, generates a title and summary, extracts a
 **Transcription**
 
 - `english` → local [OpenAI Whisper](https://github.com/openai/whisper)
-- `hinglish` → [Sarvam](https://www.sarvam.ai/) speech-to-text translate (English transcript)
+- `hinglish` → [Sarvam](https://www.sarvam.ai/) speech-to-text translate (other 22 languages+ transcript)
 
 **Language models**
 
