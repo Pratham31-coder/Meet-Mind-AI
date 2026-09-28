@@ -134,4 +134,4 @@ Long videos take several minutes: download/convert, Whisper on CPU, and multiple
 
 ## License
 
-Personal / portfolio project. Add a license file if you want others to reuse this code.
+Personal / portfolio project.
