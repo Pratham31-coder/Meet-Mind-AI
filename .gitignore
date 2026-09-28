@@ -1,0 +1,37 @@
+# Secrets — never commit API keys
+.env
+.env.local
+.env.*.local
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Pipeline media and caches (large binary files)
+downloades/
+downloads/
+utils/downloads/
+vector_db/
+*.wav
+*.mp4
+*.mp3
+*.webm
+*.m4a
+*.mkv
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.cursor/
+.vscode/
+
+# Future app data
+backend/data/
+dist/
+node_modules/
