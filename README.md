@@ -1,4 +1,4 @@
-# MeetMind AI 🚀
+# MeetMind AI 
 
 Turn a YouTube video or local audio/video file into comprehensive meeting notes you can chat with—powered by **GPU-accelerated** transcription and lightning-fast **Groq LLM** inference.
 
