@@ -1,14 +1,36 @@
-streamlit
+# Core AI / ML
 openai-whisper
 torch
+
+# Audio & video
 yt-dlp
+pydub
+
+# LangChain framework
 langchain
 langchain-core
 langchain-community
-langchain-mistralai
-chromadb
+langchain-google-genai
+langchain-groq
+langchain-chroma
 langchain-huggingface
+
+# Embeddings
 sentence-transformers
 transformers
 accelerate
-reportlab
+
+# Vector store
+chromadb
+
+# Utilities
+python-dotenv
+requests
+
+# Backend (will be used from Phase 2 onward)
+fastapi
+uvicorn[standard]
+pydantic-settings
+sqlalchemy
+python-multipart
+tenacity

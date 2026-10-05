@@ -1,16 +1,10 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.runnables import RunnablePassthrough, RunnableLambda 
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 
-import os 
-def get_llm():
-    return ChatGoogleGenerativeAI(
-        model="gemini-3.8-flash",
-        google_api_key=os.getenv("GEMINI_API_KEY"),
-        temperature=0.3
-    )
+from core.llm import get_mistral_llm
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 
 def split_transcript(transcript: str) -> list:
@@ -21,8 +15,9 @@ def split_transcript(transcript: str) -> list:
 
     return splitter.split_text(transcript)
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def summarize(transcript : str) -> str:
-    llm = get_llm()
+    llm = get_mistral_llm()
 
     map_prompt = ChatPromptTemplate.from_messages(
         [
@@ -56,8 +51,9 @@ def summarize(transcript : str) -> str:
 
     return combined_chain.invoke(combined)
 
-def generate_title(transcipt : str) -> str:
-    llm = get_llm()
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+def generate_title(transcript : str) -> str:
+    llm = get_mistral_llm()
 
     
 
@@ -75,7 +71,7 @@ def generate_title(transcipt : str) -> str:
         |StrOutputParser()
     )
 
-    return title_chain.invoke(transcipt[:2000])
+    return title_chain.invoke(transcript[:2000])
 
 
 

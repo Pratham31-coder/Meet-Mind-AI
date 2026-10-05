@@ -1,56 +1,35 @@
-#Actionableitems , decision , questions 
-
-from langchain_google_genai import ChatGoogleGenerativeAI 
+from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-import os 
+from core.llm import get_groq_llm
+from tenacity import retry, stop_after_attempt, wait_exponential
 
+class ActionItem(BaseModel):
+    task: str = Field(description="The task to be completed")
+    owner: str = Field(description="The person responsible for the task. If unknown, leave empty.", default="")
+    deadline: str = Field(description="The deadline for the task. If unknown, leave empty.", default="")
+    status: str = Field(description="Status of the task", default="open")
 
-def get_llm():
-    return ChatGoogleGenerativeAI(
-        model="gemini-3.8-flash",
-        google_api_key=os.getenv("GEMINI_API_KEY"),
-        temperature=0.3
-    ) 
+class MeetingInsights(BaseModel):
+    title: str = Field(description="A concise, catchy title for the meeting (max 6 words)")
+    summary: str = Field(description="A comprehensive 2-3 paragraph summary of the meeting")
+    action_items: list[ActionItem] = Field(description="List of action items.")
+    key_decisions: list[str] = Field(description="List of key decisions made.")
+    open_questions: list[str] = Field(description="List of unresolved questions or topics needing follow-up.")
 
-
-
-def build_chain(system_prompt : str):
-    llm = get_llm()
-    return (
-        RunnablePassthrough() | RunnableLambda(lambda x : {"text" : x}) |ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        ("human","{text}"),
-    ]) | llm |StrOutputParser()
-    )
-
-def extract_action_items(transcript:str)->str:
-    chain = build_chain(
-         "You are an expert meeting analyst. From the meeting transcript, "
-        "extract all action items. For each provide:\n"
-        "- Task description\n"
-        "- Owner (who is responsible)\n"
-        "- Deadline (if mentioned, else write 'Not specified')\n\n"
-        "Format as a numbered list. If none found say 'No action items found.'"
-    )
-
-    return chain.invoke(transcript)
-
-
-def extract_key_decisions(transcript: str) -> str:
-    chain = build_chain(
-        "You are an expert meeting analyst. From the meeting transcript, "
-        "extract all key decisions made. Format as a numbered list. "
-        "If none found say 'No key decisions found.'"
-    )
-    return chain.invoke(transcript)
-
-
-def extract_questions(transcript: str) -> str:
-    chain = build_chain(
-        "From the meeting transcript, extract all unresolved questions "
-        "or topics needing follow-up. Format as a numbered list. "
-        "If none found say 'No open questions found.'"
-    )
-    return chain.invoke(transcript)
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+def generate_all_insights(transcript: str) -> MeetingInsights:
+    """
+    Extracts title, summary, actions, decisions, and questions in ONE single LLM call.
+    Uses Groq Structured Output to guarantee the Pydantic schema is populated.
+    """
+    llm = get_groq_llm().with_structured_output(MeetingInsights)
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are an expert executive assistant. Analyze the following meeting transcript and extract the title, summary, action items, key decisions, and open questions perfectly formatted."),
+        ("human", "Meeting Transcript:\n\n{text}")
+    ])
+    
+    chain = prompt | llm
+    
+    # Gemini 1.5 Flash has a 1M token context window, so we can pass the whole transcript
+    return chain.invoke({"text": transcript})

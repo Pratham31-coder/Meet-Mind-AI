@@ -33,5 +33,7 @@ Thumbs.db
 
 # Future app data
 backend/data/
+data/
 dist/
 node_modules/
+.gemini/

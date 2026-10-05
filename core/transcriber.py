@@ -2,6 +2,7 @@ import whisper
 import os
 import requests
 from pydub import AudioSegment
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Sarvam's sync STT-translate API rejects audio longer than 30s.
 # We slice each chunk into 25s pieces (with a 5s safety margin) before sending.
@@ -31,12 +32,19 @@ def load_model():
 
 def transcribe_chunk_whisper(chunk_path: str) -> str:
 
-    model = load_model()  
+    # Guard: skip chunks that are empty — Whisper crashes on 0-frame audio
+    from pydub import AudioSegment as _AS
+    if len(_AS.from_wav(chunk_path)) < 1000:  # less than 1 second
+        print(f"Skipping empty/silent chunk: {chunk_path}")
+        return ""
 
-    result = model.transcribe(chunk_path, task="transcribe")  
-    return result["text"]  
+    model = load_model()
+
+    result = model.transcribe(chunk_path, task="transcribe")
+    return result["text"]
 
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def _send_to_sarvam(piece_path: str) -> str:
     """Send one ≤30s WAV file to Sarvam and return the English transcript."""
     headers = {"api-subscription-key": SARVAM_API_KEY}
