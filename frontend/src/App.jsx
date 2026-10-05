@@ -11,7 +11,7 @@ function App() {
       <header>
         <h1 className="logo">
           <Sparkles className="text-accent" />
-          AI Video Assistant
+          MeetMind AI
         </h1>
       </header>
       
