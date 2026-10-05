@@ -1,137 +1,155 @@
-# MeetMind AI
+# MeetMind AI 🚀
 
-Turn a YouTube video or local audio/video file into meeting notes you can chat with.
+Turn a YouTube video or local audio/video file into comprehensive meeting notes you can chat with—powered by **GPU-accelerated** transcription and lightning-fast **Groq LLM** inference.
 
-MeetMind AI transcribes the recording, generates a title and summary, extracts action items, key decisions, and open questions, then builds a local knowledge base so you can ask follow-up questions about the meeting.
+MeetMind AI transcribes your recording on your local NVIDIA GPU, generates a title and summary, extracts action items, key decisions, and open questions, and then builds a local vector knowledge base so you can ask follow-up questions about the meeting. 
 
-## What it does
+It features a modern **React Frontend** and a **FastAPI Backend**, replacing slow CPU workloads with blazingly fast hardware acceleration.
+
+---
+
+## ✨ What it does
 
 1. Accepts a **YouTube URL** or a **local file path**.
-2. Downloads or converts the audio (WAV, 16 kHz, mono).
-3. Splits audio into chunks and transcribes it.
-4. Uses an LLM to produce:
+2. Downloads or converts the audio seamlessly (WAV, 16 kHz, mono).
+3. Transcribes the audio locally using your GPU.
+4. Uses **Groq (`openai/gpt-oss-120b`)** to produce:
    - Meeting title
-   - Summary
-   - Action items
+   - 2-3 paragraph summary
+   - Action items (with assignees and deadlines)
    - Key decisions
    - Open questions
-5. Stores the transcript in **Chroma** for retrieval-augmented Q&A.
-6. Lets you chat with the meeting in the terminal.
+5. Stores the transcript in **ChromaDB** using local HuggingFace embeddings.
+6. Allows you to chat with your meeting via an interactive Retrieval-Augmented Generation (RAG) UI.
 
 **Transcription**
-
-- `english` → local [OpenAI Whisper](https://github.com/openai/whisper)
+- `english` → local [OpenAI Whisper](https://github.com/openai/whisper) (Hardware Accelerated via PyTorch CUDA)
 - `hinglish` → [Sarvam](https://www.sarvam.ai/) speech-to-text translate (English transcript)
 
-**Language models**
+**Language Models**
+- **Groq API** handles all summarization, extraction, and RAG chat.
 
-- Gemini for title, summary, and extraction
-- Mistral for RAG chat
+---
 
-## Pipeline
+## 🏗️ Pipeline Architecture
 
 ```text
-YouTube URL or local file
-        ↓
-   Audio extract / convert
-        ↓
-      Chunk audio
-        ↓
-  Whisper or Sarvam STT
-        ↓
-        Transcript
-        ├── Gemini → title, summary, actions, decisions, questions
-        └── Chroma + MiniLM embeddings
-                    ↓
-              Mistral RAG chat
+YouTube URL or Local File
+           ↓
+ Audio Extraction (yt-dlp/ffmpeg)
+           ↓
+ GPU-Accelerated Transcription (Whisper CUDA)
+           ↓
+       Transcript
+           ├── Groq API → Title, Summary, Actions, Decisions, Questions
+           └── ChromaDB + HuggingFace Embeddings (GPU)
+                       ↓
+              Interactive RAG Chat (Groq API)
 ```
 
-## Project structure
+## 📂 Project Structure
 
 ```text
-main.py                 CLI entry point
+backend/
+  app/
+    main.py                 FastAPI application entry point
+    api/                    API routing (meetings, chat)
+    services/               Background pipeline and DB services
+    models/                 SQLAlchemy database schemas
 core/
-  transcriber.py        Whisper / Sarvam
-  summarizer.py         Title and summary (Gemini)
-  extractor.py          Actions, decisions, questions (Gemini)
-  vector_store.py       Chroma vector store
-  rag_engine.py         LangChain RAG chain (Mistral)
+  transcriber.py            Whisper / Sarvam integrations
+  extractor.py              Groq structured data extraction
+  vector_store.py           Chroma vector store builder
+  rag_engine.py             LangChain RAG chain (Groq)
 utils/
-  audio_processor.py    yt-dlp download, convert, chunk
-.env.example            Environment variable template
+  audio_processor.py        Audio chunking and conversion
+frontend/
+  src/                      Vite + React UI components
 ```
 
-## Prerequisites
+---
 
-- Python 3.11 or 3.12 recommended
-- [FFmpeg](https://ffmpeg.org/) on your PATH (required by `yt-dlp` and `pydub`)
-- API keys: Gemini, Mistral, and Sarvam (Sarvam only if you use hinglish)
+## ⚙️ Prerequisites
 
-## Setup
+- Python 3.11 or 3.12
+- Node.js (v18+)
+- [FFmpeg](https://ffmpeg.org/) installed and added to your system PATH
+- **NVIDIA GPU** (Optional but highly recommended for CUDA acceleration)
+- API keys: **Groq** (and **Sarvam** if transcribing Hinglish)
 
+---
+
+## 🚀 Setup
+
+### 1. Clone the repository
 ```bash
 git clone https://github.com/Pratham31-coder/Meet-Mind-AI.git
 cd Meet-Mind-AI
-python -m venv .venv
 ```
 
-Windows:
+### 2. Backend Setup
+Set up your Python virtual environment and install dependencies:
 
+**Windows:**
 ```powershell
+python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-pip install python-dotenv pydub langchain-google-genai langchain-chroma requests
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 ```
 
-macOS / Linux:
-
+**macOS / Linux:**
 ```bash
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pip install python-dotenv pydub langchain-google-genai langchain-chroma requests
 ```
 
-Copy the env template and add your keys (never commit `.env`):
-
-```powershell
-copy .env.example .env
-```
-
+### 3. Environment Variables
+Create your `.env` file in the root directory:
 ```bash
 cp .env.example .env
 ```
-
+Add your keys to the `.env` file:
 | Variable | Purpose |
 |---|---|
-| `GEMINI_API_KEY` | Title, summary, action items, decisions, questions |
-| `MISTRAL_API_KEY` | Chat over the transcript (RAG) |
+| `GROQ_API_KEY` | Title, summary, extraction, and RAG chat |
 | `SARVAM_API_KEY` | Hinglish transcription |
 | `WHISPER_MODEL` | Local Whisper size (`tiny`, `base`, `small`, `medium`, `large`). Default: `small` |
-| `SARVAM_STT_MODEL` | Sarvam model. Default: `saaras:v3` |
 
-The first Whisper run downloads the model weights. Embeddings use `all-MiniLM-L6-v2` on CPU.
-
-## Run
-
+### 4. Frontend Setup
 ```bash
-python main.py
+cd frontend
+npm install
 ```
 
-You will be prompted for:
+---
 
-1. A YouTube URL or a local audio/video path
-2. Language: `english` or `hinglish` (press Enter for English)
+## 🏃‍♂️ Running the Application
 
-After processing, the CLI prints the title, summary, action items, decisions, and questions. Then you can ask questions about the meeting. Type `exit`, `quit`, or `q` to stop.
+You need to run both the FastAPI backend and the React frontend simultaneously.
 
-Long videos take several minutes: download/convert, Whisper on CPU, and multiple LLM calls.
+**Start the Backend:**
+```powershell
+# From the root directory (ensure your .venv is activated)
+python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+```
 
-## Notes
+**Start the Frontend:**
+```powershell
+# From the /frontend directory
+npm run dev
+```
 
-- Downloaded audio and chunks are written under `downloades/` and are gitignored.
-- The vector store is written to `vector_db/` (also gitignored). The current CLI uses a single Chroma collection, so a new run shares that store.
-- `app.py` is a placeholder. A FastAPI + React web app is planned; the CLI pipeline above is the working product today.
+The application will be live at: **http://localhost:5173**
 
-## License
+---
 
-Personal / portfolio project. Add a license file if you want others to reuse this code.
+## 📝 Notes
+
+- Large files and chunks are temporarily stored in `backend/data/jobs/` and are automatically cleaned up.
+- Vector databases are uniquely created per meeting inside the job directory to ensure accurate RAG retrieval.
+- The first run will download the Whisper model and HuggingFace embedding weights. Subsequent runs will use the cached local weights on your GPU.
+
+## 📄 License
+Personal / portfolio project.
